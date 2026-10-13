@@ -12,6 +12,10 @@ it's basically youtube.com/tv in a fullscreen electron window, plus a couple fix
 
 no frameport? copy the folder to the frame, add `frametube` (the small launcher, NOT `frametube-electron`) as a non-steam game, done.
 
+on a steam deck or a pc grab `FrameTube-linux-x64.tar.gz` instead, same deal. distros that block user namespaces (ubuntu 23.10+ does) need `--no-sandbox` in the launch options, steamos doesnt.
+
+every release is built by github actions from the tagged commit (`.github/workflows/release.yml`), each download has a `.sha256` next to it.
+
 signing in works like any tv, pick sign in and enter the code at youtube.com/activate on your phone. it stays signed in.
 
 ## controls

@@ -1,15 +1,15 @@
 {
   "name": "frametube",
   "productName": "FrameTube",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "YouTube's TV interface as a Linux app for the Steam Frame, with controller navigation",
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {
     "start": "electron . --no-sandbox",
     "test": "node --test test/*.test.js",
-    "build": "electron-builder --linux dir --arm64",
-    "build:x64": "electron-builder --linux dir --x64",
+    "build": "electron-builder --linux dir --arm64 --publish never",
+    "build:x64": "electron-builder --linux dir --x64 --publish never",
     "build:launcher": "launcher/build.sh"
   },
   "build": {

@@ -1,0 +1,90 @@
+# tests and builds on every push and pr, pushing a v* tag also publishes the builds as a github release
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        include:
+          - arch: arm64 # steam frame
+            dir: linux-arm64-unpacked
+          - arch: x64 # steam deck, pcs
+            dir: linux-unpacked
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # the launcher is a static freestanding binary, any clang + lld builds both arches
+      - name: install clang and lld
+        run: sudo apt-get update && sudo apt-get install -y clang lld
+
+      - run: npm ci
+      - run: CLANG=clang npm run build:launcher
+      - run: npm test
+
+      - name: build
+        run: npx electron-builder --linux dir --${{ matrix.arch }} --publish never
+
+      - name: package
+        run: |
+          mkdir -p out
+          cp -a "dist/${{ matrix.dir }}" out/FrameTube
+          tar czf "FrameTube-linux-${{ matrix.arch }}.tar.gz" -C out FrameTube
+          sha256sum "FrameTube-linux-${{ matrix.arch }}.tar.gz" > "FrameTube-linux-${{ matrix.arch }}.tar.gz.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FrameTube-linux-${{ matrix.arch }}
+          path: FrameTube-linux-${{ matrix.arch }}.tar.gz*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # the tag has to match package.json, so the app reports the version it was released as
+      - name: check version
+        run: |
+          want="v$(node -p "require('./package.json').version")"
+          [ "$want" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME but package.json says $want"; exit 1; }
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          ## install
+
+          - steam frame: grab `FrameTube-linux-arm64.tar.gz`, unpack it, add the folder in FramePort (Add a Linux app… folder) or add `frametube` to steam as a non-steam game
+          - steam deck or a pc: same thing with `FrameTube-linux-x64.tar.gz`. on distros that block user namespaces (ubuntu 23.10+) add `--no-sandbox` to the launch options
+
+          ## controls
+
+          d-pad or left stick moves, A selects, B goes back, X plays/pauses
+          EOF
+          gh release create "$GITHUB_REF_NAME" assets/* --title "FrameTube ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes
