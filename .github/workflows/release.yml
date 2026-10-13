@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          path: assets
+          path: release-assets
           merge-multiple: true
 
       - name: publish
@@ -87,4 +87,4 @@ jobs:
 
           d-pad or left stick moves, A selects, B goes back, X plays/pauses
           EOF
-          gh release create "$GITHUB_REF_NAME" assets/* --title "FrameTube ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes
+          gh release create "$GITHUB_REF_NAME" release-assets/* --title "FrameTube ${GITHUB_REF_NAME#v}" --notes-file notes.md --generate-notes
